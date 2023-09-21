@@ -1,0 +1,5 @@
+flask==2.3.3
+redis==5.0.0
+requests==2.22.0
+rq==1.15.1
+pymongo==4.5.0

@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+  gateway:
+    container_name: gateway
+    ports:
+      - "3000:3000"
+    build: 
+      context: app
+      dockerfile: DockerfileGateway
+    depends_on:
+      - redis
+    networks:
+      - app-tier
+  router:
+    container_name: router
+    build: 
+      context: app
+      dockerfile: DockerfileRouter
+    depends_on:
+    # Router does not need to be dependent on the gatewaty service, as long as it can connect with the redis, we are okay.
+      - redis
+      - mongodb
+    networks:
+      - app-tier  
+
+  webhooks:
+    container_name: webhooks
+    ports:
+      - "5000:5000"
+    build: 
+      context: app/external
+      dockerfile: DockerfileWebhooks
+    networks:
+      - app-tier  
+  
+  redis: 
+    image: bitnami/redis:6.2.13
+    container_name: redis
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - '6379:6379' 
+    expose: 
+      - "6379"
+    # volumes:
+    #   - ./redis-persistence:/bitnami/redis/data
+    networks:
+      - app-tier
+
+# Destinations
+  mongodb:
+    image: mongo:6-jammy
+    container_name: mongo_destination
+    ports:
+      - '27017:27017'
+    volumes:
+      - dbdata6:/data/db
+    networks:
+      - app-tier
+volumes:
+  dbdata6:
+
+networks:
+  app-tier:
+    driver: bridge
+  
