@@ -59,7 +59,13 @@ def handle_publish():
         res.checkValidData(data)
         if(res.response['success']):
             # push data to the redis queue
-            redisResponse = redisForwarder.publishData(data = data)
+            logger.info("Pushing event to the redis queue: " + json.dumps(data))
+            redisResponse = redisForwarder.publishData(data = data)             #redisResponse contains the error if present
+            if not redisResponse:
+                logger.info("Successfully pushed event to redis queue: " + json.dumps(data))
+            else:
+                logger.error("Error in pushing event to redis queue: " + json.dumps(data))
+
             res.handlePublishResponse(redisResponse)
         logger.info(res.response)
         return res.response, res.status_code

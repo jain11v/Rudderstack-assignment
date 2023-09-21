@@ -42,7 +42,7 @@ def sendDataWebhook(url, data, delay = 2):          # delay inc exponentially an
     if(delay > 30):
         logger.error("error sending data to: " + url + " with data: " + json.dumps(data))
     try:
-        logger.info("Making call to webhook: " + url + " with data: " + json.dumps(data))
+        logger.info("Calling webhook: " + url + " with data: " + json.dumps(data))
         requests.post(url=url, json=data)
         logger.info("Successfully called webhook: " + url + " with data: " + json.dumps(data))
     except:
@@ -56,9 +56,9 @@ def addDataToDB(data, delay = 2):          # delay inc exponentially and is limi
     if(delay > 30):
         logger.error("error adding data to DB: " + json.dumps(data))
     try:
-        logger.info("request to add data to db: " + json.dumps(data))
+        logger.info("received request to add data to db: " + json.dumps(data))
         mycol.insert_one({"userId": str(data['userId']), "payload": data['payload']})
-        logger.info("inserted to db: " + json.dumps(data))
+        logger.info("successfully inserted data to db: " + json.dumps(data))
     except:
         # sleep and then retry
         time.sleep(delay)
@@ -81,6 +81,8 @@ def startConsuming(json_data):
 def start_dequeue():
     with Connection(redis_cli.redis_conn):
         worker = Worker([redis_cli.queue])          # Redis worker that listens to new messages in queue (FIFO)
+        logger.info("Received an event in redis queue: " + worker.name)
         worker.work()                               # executes the event handler
+        logger.info("Completed the event: " + worker.name)
         
 
