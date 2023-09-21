@@ -4,10 +4,20 @@ from flask import Flask, request
 
 from env import *
 from internal.receiver import eventForwarder
+from sys import stdout
 import logging
 
 app = Flask(__name__)
 redisForwarder = eventForwarder.RedisForwarder()
+
+logger = logging.getLogger('gateway_logs')
+logger.setLevel(logging.INFO) # set logger level
+
+logFormatter = logging.Formatter\
+("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+consoleHandler = logging.StreamHandler(stdout) #set streamhandler to stdout
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 class HttpResponse:
     def __init__(self):
@@ -44,13 +54,14 @@ def handle_publish():
     if request.method == 'POST':
         res = HttpResponse()
         data = request.json
+        logger.info("received HTTP request with event: " + json.dumps(data))
         # check if incoming data is valid
         res.checkValidData(data)
         if(res.response['success']):
             # push data to the redis queue
             redisResponse = redisForwarder.publishData(data = data)
             res.handlePublishResponse(redisResponse)
-        logging.info(res.response)
+        logger.info(res.response)
         return res.response, res.status_code
         
 class HttpServer:

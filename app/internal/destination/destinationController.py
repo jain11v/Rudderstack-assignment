@@ -6,8 +6,20 @@ import redis
 import requests
 import logging
 import json
+from sys import stdout
 from env import *
 from rq import Connection, Queue, Worker
+
+
+
+logger = logging.getLogger('router_logs')
+logger.setLevel(logging.INFO) # set logger level
+
+logFormatter = logging.Formatter\
+("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+consoleHandler = logging.StreamHandler(stdout) #set streamhandler to stdout
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 # Class to connect with redis server and the redis queue
 class RedisClient:
@@ -28,9 +40,11 @@ mycol = mydb["events"]
 # Destination type 2 - Call to webhook 
 def sendDataWebhook(url, data, delay = 2):          # delay inc exponentially and is limited to 30 (no. of tries = 4)
     if(delay > 30):
-        logging.error("error sending data to:", url, "with data:", json.dumps(data))
+        logger.error("error sending data to: " + url + " with data: " + json.dumps(data))
     try:
+        logger.info("Making call to webhook: " + url + " with data: " + json.dumps(data))
         requests.post(url=url, json=data)
+        logger.info("Successfully called webhook: " + url + " with data: " + json.dumps(data))
     except:
         # sleep and then retry
         time.sleep(delay)
@@ -40,10 +54,11 @@ def sendDataWebhook(url, data, delay = 2):          # delay inc exponentially an
 # Destination type 1 - MongoDB (stores the incoming payload and userID)
 def addDataToDB(data, delay = 2):          # delay inc exponentially and is limited to 30 (no. of tries = 4)
     if(delay > 30):
-        logging.error("error adding data to DB:", json.dumps(data))
+        logger.error("error adding data to DB: " + json.dumps(data))
     try:
+        logger.info("request to add data to db: " + json.dumps(data))
         mycol.insert_one({"userId": str(data['userId']), "payload": data['payload']})
-        logging.info("inserted to db: ", json.dumps(data))
+        logger.info("inserted to db: " + json.dumps(data))
     except:
         # sleep and then retry
         time.sleep(delay)
