@@ -1,0 +1,8 @@
+MONGO_HOST = 'mongodb'
+GATEWAY_HOST = 'gateway'
+GATEWAY_PORT = 3000
+WEBHOOK_HOST = 'webhooks'
+WEBHOOK_PORT = '5000'
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
+REDIS_CHANNEL_NAME = 'event_manager'
