@@ -1,19 +1,18 @@
-Introduction
-============
+# Introduction
 
 This is an event delivery implementation in Python using Redis
 for supporting the desired system's requirements.
 
 - **Durability:** Received events through HTTP are stored inside a Redis queue
   and each destination handler only commit offset after the
-  successful processing of an event. after a restart/crash,
-  worker shall resume from the last delivered offset. 
+  successful processing of the event. After a restart/crash,
+  worker resumes from the last delivered offset. 
 
-- **At-least-once delivery:** Redis queues provides at-least-once guarantees
+- **At-least-once delivery:** Redis queues provides at-least-once guarantee
   as long as you make sure that you don't commit offsets for
   unprocessed events.
 
-- **Retry backoff and limit:** Since we care about ordering guarantees,
+- **Retry backoff and limit:** Since we care about ordering,
   there is no simple way to implement a retry mechanism using Redis's
   native constructs. This implementation uses an in-memory retry
   mechanism during event processing.
@@ -26,23 +25,65 @@ for supporting the desired system's requirements.
 - **Maintaining order:** Redis queue can guarantee the order of events in the
   same queue. 
 
-- **Delivery isolation:** Parallel threads in python handles the delivery to
+- **Delivery isolation:** Different threads in python handles the delivery to
   different destinations which does not hinder with each other i.e. no delays 
   are created because of any delays or failures in any one destination.
 
-# Compromises
+## Pipeline
+![alt text](https://github.com/jain11v/Rudderstack-assignment/blob/master/app/Rudderstack-pipeline.svg)
+1. Here, the gateway service accepts the incoming HTTP requests which contains **_userId_** and the **_payload_** for the event.
+2. Gateway, after receiving the request makes a call to redis server and pushes the _event_ to redis queue. Only after pushing the _event_ to the queue, a success response is returned.
+3. Router service handles the job of routing the events in the redis queue and send them to muptiple destinations. Destinations used in this projects are: 
+    - Webhooks
+    - mongoDB
+4. Router service picks up an event from redis queue (FIFO) and further send it across all the destinations. If event is successfully processed then that event is acknowledged in the redis queue. If anything goes wrong during this process, that message is not acknowledged. 
+5. Destination handlers works in parallel during handling of any single event, i.e. if there is some delay in sending event to a particular destination, it does not affect time taken by other destination handlers.
+6. Each destination handler has a failure retry mechanism under which if there is a failure during this process, a retry is initiated. These retries are done in increasing time delays (in each retry delay is set to double the previous time) and if the delay time crosses a certain limit, error is logged.  
+
+## Installation
+Docker to handle environment and dependencies. Run the docker containers.
+
+```sh
+sudo docker-compose up
+```
+This will start the following containers:
+- Redis server
+- MongoDB server
+- Flask App which will expose APIs to receive events.
+- Python script which will handle delivery of events to different destination.
+- Flask app which act as destination webhooks
+#### Run test cases:
+- Initiate the docker containers.
+```sh
+sudo docker compose up
+```
+- Check process status of the running docker containers and copy the container Id of gateway container
+```sh
+sudo docker ps
+```
+- Using the container Id of gateway container enter into its shell.
+```sh
+sudo docker exec -it <container_id> /bin/sh
+```
+- Go into tests directory
+```sh
+cd tests
+```
+- Run the python script for unit testing
+```sh
+python3 unittests.py
+```
+## Compromises
 
 1. A single slow or failing message will block all messages behind the
    problematic message, ie. the entire partition. The process may recover,
    but the latency of all the messages behind the problematic one will be
    negatively impacted severely.
+2. If the rounting server crashes when the routing to different destinations 
+   was done and acknowledgement to redis was pending, in that case when the server 
+   starts again it will again pick up the event and will again process it.
 
-Running docker containers
-=================
-
-1. Run docker compose which will start the following containers:
-- Redis server
-- MongoDB server
-- Flask App which will expose APIs to receive events.
-- Python script which will handle delivery of events to different destination.
-- Python script to verify unit test cases.
+## Further Work
+1. In this assignment we are assuming that each event will be broadcasted to every detination we have. But in real case senerios this might not be the case. Each HTTP request can have set of detinations which it should be delivered to. There are these two ways of handling this:
+- The information regarding destinations can be taken as part of HTTP request and then using that controller can handle the event delivery.
+- A different controller service can be made which manages the delivery to detination by looking at the source of event.
