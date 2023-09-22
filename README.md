@@ -84,6 +84,6 @@ python3 unittests.py
    starts again it will again pick up the event and will again process it.
 
 ## Further Work
-1. In this assignment we are assuming that each event will be broadcasted to every detination we have. But in real case senerios this might not be the case. Each HTTP request can have set of detinations which it should be delivered to. There are these two ways of handling this:
-- The information regarding destinations can be taken as part of HTTP request and then using that controller can handle the event delivery.
-- A different controller service can be made which manages the delivery to detination by looking at the source of event.
+1. In this assignment, we currently operate under the assumption that every event will be disseminated to all available destinations. However, in practical scenarios, this may not always hold true. Each HTTP request may specify a specific set of destinations to which it should be directed. There are two potential approaches to address this issue:
+- Incorporate destination information as part of the HTTP request itself, allowing a dedicated controller to manage event delivery based on this information.
+- Develop a separate controller service responsible for routing events to their respective destinations by analyzing the event's source.
